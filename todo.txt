@@ -1,0 +1,13 @@
+Plan
+
+1. Read 
+ZipCPU skid buffer — zipcpu.com/blog/2019/05/22/skidbuffer.html
+ZipCPU basic FIFO — zipcpu.com/blog/2017/07/29/fifo.html
+ZipCPU easy AXI-Lite — zipcpu.com/blog/2020/03/08/easyaxil.html
+Skip: ARM specs cover-to-cover, Cummings async FIFO (no clock crossing here), ChipVerify (lookup only).
+
+2. Skid buffer - smallest complete AXI-Stream block. 
+3. Sync FIFO - adds pointers/full-empty on top of a handshake
+4. AXI-Lite register file
+5. Filter datapath - store-and-forward decide at tlast, release or discard.
+6. scapy stimulus + reference model
