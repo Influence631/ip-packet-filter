@@ -84,4 +84,9 @@ module skid_buffer
   end
 
   assign ds_data_o = main_buf_q;
+
+  //once us_valid_i is set, it must not go low untill a transmission happens
+  assert property (@(posedge clk_i) disable iff (!rst_ni)
+      (us_valid_i & !us_ready_o) |-> $stable(us_data_i)
+  ) else $error("data has changed while valid was set, without ready");
 endmodule

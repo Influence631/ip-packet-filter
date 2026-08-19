@@ -110,7 +110,7 @@ def run(top, test_module, sources=None, parameters=None):
         sources=sources or [RTL / f"{top}.sv"],
         hdl_toplevel=top,
         parameters=parameters or {},
-        build_args=["--trace-fst"],
+        build_args=["--trace-fst", "--assert"],
         build_dir=ROOT / "sim_build" / top,
         always=True,
         waves=True,
@@ -126,7 +126,14 @@ from cocotb.triggers import RisingEdge
 
 from common import run
 
+dutTB:
+	def __init__(self, dut):
+		pass
 
+	@classmethod
+	async def create(dut):
+		return dutTB(dut)
+		
 @cocotb.test()
 async def passthrough(dut):
     cocotb.start_soon(Clock(dut.clk_i, 10, unit="ns").start())
@@ -147,7 +154,7 @@ def test_template():
     # 2. rename this function to test_<block>
     # 3. delete the skip below and set the module name
     pytest.skip("template file: copy it per block, then remove this skip")
-    run("template", test_module="test_template", parameters={})
+    run(top="template", test_module="test_template", parameters={}) #e.g{WIDTH : 8}
 endef
 
 define GITIGNORE

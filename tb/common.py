@@ -13,8 +13,9 @@ def run(top, test_module, sources=None, parameters=None):
         sources=sources or [RTL / f"{top}.sv"],
         hdl_toplevel=top,
         parameters=parameters or {},
-        build_args=["--trace-fst"],
+        build_args=["--trace-fst", "--assert"],
         build_dir=ROOT / "sim_build" / top,
+        always=True,
         waves=True,
     )
     runner.test(hdl_toplevel=top, test_module=test_module, waves=True)
