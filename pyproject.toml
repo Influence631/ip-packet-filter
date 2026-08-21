@@ -1,0 +1,5 @@
+[tool.mypy]
+python_executable = "/home/azki/.venv/hdlenv/bin/python"
+check_untyped_defs = true
+warn_unused_ignores = true
+files = ["tb"]
