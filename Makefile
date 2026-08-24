@@ -106,8 +106,10 @@ ROOT = TB.parent
 RTL = ROOT / "$(RTL_DIR)"
 
 
-def run(top, test_module, sources=None, parameters=None):
+def run(top, test_module, sources=None, parameters=None, testcase=None):
     """Build `top` out of $(RTL_DIR)/ and run `test_module` against it."""
+    # Run a subset with TESTCASE=<regex>; unset runs all of them.
+    testcase = testcase or os.environ.get("TESTCASE")
     # Verilator seed must be non-zero. Override with SEED=<n> to reproduce a failure.
     seed = int(os.environ.get("SEED") or random.randrange(1, 2**31))
     print(f"[common] SEED={seed}")
@@ -131,6 +133,7 @@ def run(top, test_module, sources=None, parameters=None):
     runner.test(
         hdl_toplevel=top,
         test_module=test_module,
+        test_filter=testcase,
         waves=True,
         plusargs=[f"+verilator+seed+{seed}", "+verilator+rand+reset+2"],
     )
@@ -217,7 +220,8 @@ define VSCODE_SETTINGS
   "python.terminal.activateEnvironment": true,
 
   // Pylance defaults to "off"; without this nothing in $(TB_DIR)/ is checked.
-  "python.analysis.typeCheckingMode": "standard"
+  "python.analysis.typeCheckingMode": "standard",
+  "mypy-type-checker.reportingScope": "workspace"
 }
 endef
 

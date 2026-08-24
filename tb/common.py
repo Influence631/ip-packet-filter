@@ -8,8 +8,10 @@ ROOT = TB.parent
 RTL = ROOT / "rtl"
 
 
-def run(top, test_module, sources=None, parameters=None):
+def run(top, test_module, sources=None, parameters=None, testcase=None):
     """Build `top` out of rtl/ and run `test_module` against it."""
+    # Run a subset with TESTCASE=<regex>; unset runs all of them.
+    testcase = testcase or os.environ.get("TESTCASE")
     # Verilator seed must be non-zero. Override with SEED=<n> to reproduce a failure.
     seed = int(os.environ.get("SEED") or random.randrange(1, 2**31))
     print(f"[common] SEED={seed}")
@@ -33,6 +35,7 @@ def run(top, test_module, sources=None, parameters=None):
     runner.test(
         hdl_toplevel=top,
         test_module=test_module,
+        test_filter=testcase,
         waves=True,
         plusargs=[f"+verilator+seed+{seed}", "+verilator+rand+reset+2"],
     )

@@ -1,5 +1,8 @@
 Plan
 
+add "cover" to make sure the assertions are actually reached. 
+
+
 1. Read 
 ZipCPU skid buffer — zipcpu.com/blog/2019/05/22/skidbuffer.html
 ZipCPU basic FIFO — zipcpu.com/blog/2017/07/29/fifo.html
@@ -11,3 +14,7 @@ Skip: ARM specs cover-to-cover, Cummings async FIFO (no clock crossing here), Ch
 4. AXI-Lite register file
 5. Filter datapath - store-and-forward decide at tlast, release or discard.
 6. scapy stimulus + reference model
+
+property assertions
+avalon mm -> axi Lite
+avalon -> axi in endian swapper 
