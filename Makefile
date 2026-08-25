@@ -20,7 +20,8 @@
 RTL_DIR    ?= rtl
 TB_DIR     ?= tb
 VENV       ?= $(HOME)/.venv/hdlenv
-STATE 	   ?= dump.surf.ron
+# surfer state file, kept per build in sim_build/<top>/ (no trailing comment: see TOP)
+STATE      ?= dump.surf.ron
 # top module name used by `make elab` (keep comments off this line: make
 # preserves the whitespace before a trailing `#`, which would corrupt $(TOP))
 TOP        ?= packet_filter
@@ -140,12 +141,17 @@ def run(top, test_module, sources=None, parameters=None, testcase=None):
 endef
 
 define TEST_TEMPLATE_PY
+import logging
+import random
+
 import cocotb
-import pytest
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
 from common import run
+
+log = logging.getLogger("tb.test_template")
+log.setLevel(logging.INFO)
 
 dutTB:
 	def __init__(self, dut):
@@ -173,8 +179,8 @@ async def passthrough(dut):
 def test_template():
     # 1. copy this file to test_<block>.py
     # 2. rename this function to test_<block>
-    # 3. delete the skip below and set the module name
-    pytest.skip("template file: copy it per block, then remove this skip")
+    # 3. delete the return below and set the module name
+    return  # template file: copy it per block, then remove this line
     run(top="template", test_module="test_template", parameters={}) #e.g{WIDTH : 8}
 endef
 
@@ -268,5 +274,9 @@ pyproject.toml:
 .PHONY: FORCE
 FORCE:
 
+# `make surfer/<top>`: -s only loads, so pass it only once a state file exists.
 surfer/%: FORCE
-	surfer sim_build/$*/dump.fst -s $(STATE)
+	@wave=sim_build/$*/dump.fst; state=sim_build/$*/$(STATE); \
+	 if [ -f "$$state" ]; then surfer "$$wave" -s "$$state"; \
+	 else echo "no $$state yet -- save state into sim_build/$*/ to persist it"; \
+	      surfer "$$wave"; fi

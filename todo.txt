@@ -1,13 +1,11 @@
-Plan
+would be good :
 
-add "cover" to make sure the assertions are actually reached. 
+"cover" - i dont like the machinery verilator needs around this
+symbyosys - format verification of the skid buffer
 
-
-1. Read 
-ZipCPU skid buffer — zipcpu.com/blog/2019/05/22/skidbuffer.html
-ZipCPU basic FIFO — zipcpu.com/blog/2017/07/29/fifo.html
-ZipCPU easy AXI-Lite — zipcpu.com/blog/2020/03/08/easyaxil.html
-Skip: ARM specs cover-to-cover, Cummings async FIFO (no clock crossing here), ChipVerify (lookup only).
+1. i want to make an SVA file and add assertions to the fifo 
++ replace the assetions in the skid buffer with macros
+2. check the resources usage of the fifo when synthesized -> see how to infer lutram / bram.
 
 2. Skid buffer - smallest complete AXI-Stream block. 
 3. Sync FIFO - adds pointers/full-empty on top of a handshake
