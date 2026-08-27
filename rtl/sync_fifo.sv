@@ -39,4 +39,8 @@ module sync_fifo #(
 
   assign full_o = r_ptr == {~w_ptr[addr_w], w_ptr[addr_w-1:0]};
   assign empty_o = r_ptr == w_ptr;
+
+  //ASSERTIONS//
+  initial assert ((DEPTH >= 2 && DEPTH == 2**addr_w)) 
+    else $error("Depth has to be power of 2, >= 2.");
 endmodule

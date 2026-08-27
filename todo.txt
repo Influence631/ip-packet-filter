@@ -1,5 +1,7 @@
 would be good :
 
+formal for the axi protocols / fsm logic
+
 "cover" - i dont like the machinery verilator needs around this
 symbyosys - format verification of the skid buffer
 

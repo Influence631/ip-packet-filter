@@ -22,18 +22,15 @@ class StreamSource:
         self.data = data
         self.width = width
 
-    async def send(self, beat) :
-        self.wr_en.value = 1
-        self.data.value = beat
-        await RisingEdge(self.clk)
-
     async def run(self, n_beats, stall_chance=0.0) :
-        for _ in range(n_beats):
-            while (random.random() < stall_chance) : #stall
-                self.wr_en.value = 0
-                await RisingEdge(self.clk)
-            beat = random.randint(0, 2**self.width - 1)
-            await self.send(beat)
+        sent = 0
+        while (sent < n_beats):
+            we = 0 if (random.random() < stall_chance) else 1
+            self.wr_en.value = we
+            self.data.value = random.randint(0, 2**self.width - 1)
+            await RisingEdge(self.clk)
+            if (self.full.value == 0 and self.wr_en.value == 1) : #last cycle was not full and we was set
+                sent += 1
         self.wr_en.value = 0
 
 class StreamSink:
@@ -42,14 +39,10 @@ class StreamSink:
         self.rd_en = rd_en
         self.empty = empty
         self.data = data
-        self.drain = False
 
     async def run(self, stall_chance=0.0) :
         while (1):
-            if ((random.random() < stall_chance) & (not self.drain)) : # stall
-                self.rd_en.value = 0 
-            else :
-                self.rd_en.value = 1
+            self.rd_en.value = 0 if (random.random() < stall_chance) else 1
             await RisingEdge(self.clk)
 
             
@@ -76,15 +69,10 @@ class FIFO_TB:
         self.dut.rst_ni.value = 1
         await RisingEdge(self.dut.clk_i)
 
-    async def drain(self, expected, timeout=20) :
-        self.sink.drain = True
-        for _ in range(timeout):
+    async def wait_quiet(self, expected) :
+        while not (self.beats == expected and not self.model) :
             await RisingEdge(self.dut.clk_i)
-            if (self.beats == expected and not self.model) :
-                self.sink.drain = False
-                return
-        raise AssertionError(f"stuck : {list(self.model)}")
-
+        
     @classmethod
     async def create(cls, dut, sink_stall_rate=0.0, width=FIFO_WIDTH, depth=FIFO_DEPTH):
         src = StreamSource(
@@ -104,7 +92,6 @@ class FIFO_TB:
 
     async def mon_us(self):
         while 1 :
-            await RisingEdge(self.dut.clk_i)
             if ((self.src.wr_en.value == 1) & (self.src.full.value == 0)) :
                 self.accepted += 1
                 self.model.append(self.src.data.value)
@@ -113,29 +100,36 @@ class FIFO_TB:
                 f"the model has {len(self.model)} elements," 
                 f"where max {self.depth} allowed"
             )
+            await RisingEdge(self.dut.clk_i)
                         
 
     async def mon_ds(self):
         while 1 :
-            await RisingEdge(self.dut.clk_i)
             if ((self.sink.rd_en.value == 1) & (self.sink.empty.value == 0)) :
                 assert self.model, f"trying to ready from an empty buffer"
                 exp = self.model.popleft()
                 got = self.sink.data.value
                 self.beats += 1
                 assert got == exp, f"got {hex(got)}, exp {hex(exp)}"
+            await RisingEdge(self.dut.clk_i)
                         
 
-@cocotb.test()
-async def full_throughtput(dut) :
-    tb = await FIFO_TB.create(dut, )
+@cocotb.test(timeout_time=200, timeout_unit="us")
+async def full_throughput(dut) :
+    tb = await FIFO_TB.create(dut)
     await tb.src.run(n_beats=NUM_BEATS, stall_chance=0.0)
-    await tb.drain(expected=NUM_BEATS, timeout=tb.depth * 2)
+    await tb.wait_quiet(expected=NUM_BEATS)
 
     assert tb.accepted == tb.beats, f"accepted {tb.accepted} != beats {tb.beats}"
 
 
-#test backpressure ##this should exercise writing when full  
-            
+@cocotb.test(timeout_time=200, timeout_unit="us")
+async def back_pressure(dut) :
+    tb = await FIFO_TB.create(dut, sink_stall_rate=0.9)
+    await tb.src.run(n_beats=NUM_BEATS, stall_chance=0.5)
+    await tb.wait_quiet(expected=NUM_BEATS)
+
+    assert tb.accepted == tb.beats, f"accepted {tb.accepted} != beats {tb.beats}"
+         
 def test_sync_fifo():
     run(top="sync_fifo", test_module="test_sync_fifo", parameters={"WIDTH" : FIFO_WIDTH, "DEPTH" : FIFO_DEPTH})
