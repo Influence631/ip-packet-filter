@@ -1,4 +1,5 @@
 `default_nettype none
+`include "assert.svh"
 
 module sync_fifo #(
   parameter integer DEPTH = 32,
@@ -41,6 +42,10 @@ module sync_fifo #(
   assign empty_o = r_ptr == w_ptr;
 
   //ASSERTIONS//
-  initial assert ((DEPTH >= 2 && DEPTH == 2**addr_w)) 
-    else $error("Depth has to be power of 2, >= 2.");
+  `ASSERT_ARM
+  `ASSERT_INIT(DEPTH >= 2 && DEPTH == 2**addr_w, "Depth has to be power of 2, >= 2.")
+  `ASSERT(sanity_check, !(full_o && empty_o), "full && empty")
+  `ASSERT(no_overflow, (we_i & full_o) |=> $stable(w_ptr), "wrote while full")
+  `ASSERT(no_underflow, (re_i & empty_o) |=> $stable(r_ptr), "read while full")
+  
 endmodule

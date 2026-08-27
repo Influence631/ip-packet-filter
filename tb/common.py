@@ -27,6 +27,7 @@ def run(top, test_module, sources=None, parameters=None, testcase=None):
             # randomize undriven/uninitialized signals and RTL X assignments
             "--x-initial", "unique",
             "--x-assign", "unique",
+            f"-I{RTL}"
         ],
         build_dir=ROOT / "sim_build" / top,
         always=True,

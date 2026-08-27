@@ -1,4 +1,5 @@
 `default_nettype none
+`include "assert.svh"
 
 module skid_buffer
 #(
@@ -85,28 +86,16 @@ module skid_buffer
   assign ds_data_o = main_buf_q;
 
 
-  bit assert_en;
-  initial assert_en = 1'b0;
-  always_ff @(posedge clk_i) if (!rst_ni) assert_en <= 1'b1;
-  //once us_valid_i is set, it must not go low untill a transmission happens
-  a_us_hold : assert property (@(posedge clk_i) disable iff (!rst_ni  || !assert_en)
-      (us_valid_i & !us_ready_o) |=> (us_valid_i & $stable(us_data_i))
-  ) else $error("us_valid/us_data changed without acceptance");
+  `ASSERT_ARM
+  
+  `ASSERT(a_us_hold, (us_valid_i & !us_ready_o) |=> (us_valid_i & $stable(us_data_i)), "us_valid/us_data changed without acceptance");
 
-  a_ds_hold : assert property (@(posedge clk_i) disable iff (!rst_ni  || !assert_en)
-    (ds_valid_o & !ds_ready_i) |=> (ds_valid_o & $stable(ds_data_o))
-  ) else $error("a beat has been dropped before reading");
+  `ASSERT(a_ds_hold, (ds_valid_o & !ds_ready_i) |=> (ds_valid_o & $stable(ds_data_o)), "a beat has been dropped before reading");
 
-  a_valid_state : assert property (@(posedge clk_i) disable iff (!rst_ni  || !assert_en)
-    state_q inside {StEmpty, StBusy, StFull}
-  ) else $error("invalid state");
+  `ASSERT(a_valid_state, state_q inside {StEmpty, StBusy, StFull}, "invalid state");
 
-  a_ready_recover : assert property (@(posedge clk_i) disable iff (!rst_ni  || !assert_en)
-    (ds_ready_i) |=> (us_ready_o)
-  ) else $error("us_ready_o stuck low after ds ready last cycle was high");
+  `ASSERT(a_ready_recover, (ds_ready_i) |=> (us_ready_o), "us_ready_o stuck low after ds ready last cycle was high");
 
-  a_no_output_bubble : assert property (@(posedge clk_i) disable iff (!rst_ni || !assert_en)
-    insert |=> ds_valid_o
-  ) else $error("Accepted beat, but ds_valid_o != 1 next cycle.");
+  `ASSERT(a_no_output_bubble, insert |=> ds_valid_o, "Accepted beat, but ds_valid_o != 1 next cycle.");
   
 endmodule
