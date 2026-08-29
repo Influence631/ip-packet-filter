@@ -5,47 +5,66 @@ module sync_fifo #(
   parameter integer DEPTH = 32,
   parameter integer WIDTH = 8
 ) (
-  input logic clk_i,
-  input logic rst_ni,
-  input logic we_i,
-  input logic re_i,
-  input logic [WIDTH - 1:0] data_i,
+  input wire logic clk_i,
+  input wire logic rst_ni,
+  input wire logic we_i,
+  input wire logic re_i,
+  input wire logic [WIDTH - 1:0] data_i,
   output logic [WIDTH - 1:0] data_o,
   output logic full_o,
   output logic empty_o
 );
   localparam addr_w = $clog2(DEPTH);
   
+  logic [addr_w:0] fill;
   logic [WIDTH-1:0] fifo [DEPTH];
-  //the pointers have an extra bit to diffentiate between full and empty
-  logic [addr_w:0] r_ptr;
-  logic [addr_w:0] w_ptr;
+
+  logic [addr_w-1:0] r_ptr;
+  logic [addr_w-1:0] w_ptr;
+  
+  logic do_write, do_read;
+  assign do_write = we_i && !full_o;
+  assign do_read = re_i && !empty_o;
 
   always_ff @(posedge clk_i) begin
     if (!rst_ni) begin 
       r_ptr <= '0;
       w_ptr <= '0;
     end else begin 
-      if (we_i && !full_o) begin 
+      if (do_write) begin 
         fifo[w_ptr[addr_w-1:0]] <= data_i;
         w_ptr <= w_ptr + 1'b1;
       end
-      
-      if (re_i && !empty_o) begin 
+      if (do_read) begin 
         r_ptr <= r_ptr + 1'b1;
       end
     end
   end
   assign data_o = fifo[r_ptr[addr_w-1:0]];
 
-  assign full_o = r_ptr == {~w_ptr[addr_w], w_ptr[addr_w-1:0]};
-  assign empty_o = r_ptr == w_ptr;
+  always_ff @(posedge clk_i) begin 
+    if (!rst_ni) begin 
+      fill <= '0;
+      full_o <= '0;
+      empty_o <= 1'b1;
+    end else begin 
+      fill <= fill + do_write - do_read;
+      full_o <= (fill == (addr_w+1)'(DEPTH - 1) && do_write && !do_read) || (full_o && !do_read);
+      empty_o <= (fill == (addr_w+1)'(1) && (do_read && !do_write)) || (empty_o && !do_write);  
+    end
+  end
 
   //ASSERTIONS//
+  `ifndef SYNTHESIS
+
   `ASSERT_ARM
   `ASSERT_INIT(DEPTH >= 2 && DEPTH == 2**addr_w, "Depth has to be power of 2, >= 2.")
   `ASSERT(sanity_check, !(full_o && empty_o), "full && empty")
   `ASSERT(no_overflow, (we_i & full_o) |=> $stable(w_ptr), "wrote while full")
-  `ASSERT(no_underflow, (re_i & empty_o) |=> $stable(r_ptr), "read while full")
+  `ASSERT(no_underflow, (re_i & empty_o) |=> $stable(r_ptr), "read while empty")
+  `ASSERT(full_check, full_o == (fill == (addr_w+1)'(DEPTH)), "full_o != (fill == depth)")
+  `ASSERT(empty_check, empty_o == (fill == 0), "empty where fill != 0")
+  `ASSERT(depth_check, fill <= (addr_w+1)'(DEPTH), "fill >= DEPTH")
+  `endif
   
 endmodule

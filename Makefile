@@ -211,6 +211,12 @@ results.xml
 .surfer
 *.ron
 build/
+
+# vivado
+*.jou
+*.dcp
+*.rpt
+.Xil/
 endef
 
 define VERIBLE_RULES

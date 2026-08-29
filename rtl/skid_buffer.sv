@@ -5,12 +5,12 @@ module skid_buffer
 #(
   parameter int WIDTH = 8
 ) (
-  input logic clk_i,
-  input logic rst_ni,
+  input wire logic clk_i,
+  input wire logic rst_ni,
 
-  input logic us_valid_i,
-  input logic [WIDTH-1:0] us_data_i,
-  input logic ds_ready_i,
+  input wire logic us_valid_i,
+  input wire logic [WIDTH-1:0] us_data_i,
+  input wire logic ds_ready_i,
 
   output logic ds_valid_o,
   output logic [WIDTH-1:0] ds_data_o,
@@ -85,6 +85,7 @@ module skid_buffer
 
   assign ds_data_o = main_buf_q;
 
+  `ifndef SYNTHESIS
 
   `ASSERT_ARM
   
@@ -97,5 +98,7 @@ module skid_buffer
   `ASSERT(a_ready_recover, (ds_ready_i) |=> (us_ready_o), "us_ready_o stuck low after ds ready last cycle was high");
 
   `ASSERT(a_no_output_bubble, insert |=> ds_valid_o, "Accepted beat, but ds_valid_o != 1 next cycle.");
+  
+  `endif
   
 endmodule

@@ -24,3 +24,9 @@ results.xml
 *.ron
 build/
 notes.txt
+
+# vivado
+*.jou
+*.dcp
+*.rpt
+.Xil/
