@@ -28,7 +28,7 @@ synth_design -top $top -part $part \
   -include_dirs [file join $root rtl] \
   -verilog_define SYNTHESIS \
   -mode out_of_context \
-  -generic DEPTH=32 \
+  -generic DEPTH=256 \
   -generic WIDTH=32
 
 report_utilization -hierarchical -file $out/util.rpt

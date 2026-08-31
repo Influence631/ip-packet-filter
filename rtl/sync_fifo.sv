@@ -17,7 +17,11 @@ module sync_fifo #(
   localparam addr_w = $clog2(DEPTH);
   
   logic [addr_w:0] fill;
+  (*ram_style = "block", rw_addr_collision = "no"*)
   logic [WIDTH-1:0] fifo [DEPTH];
+
+  logic [WIDTH-1:0] rd_data_q;
+  logic do_read_q;
 
   logic [addr_w-1:0] r_ptr;
   logic [addr_w-1:0] w_ptr;
@@ -26,28 +30,26 @@ module sync_fifo #(
   assign do_write = we_i && !full_o;
   assign do_read = re_i && !empty_o;
 
+  //bram
   always_ff @(posedge clk_i) begin
-    if (!rst_ni) begin 
-      r_ptr <= '0;
-      w_ptr <= '0;
-    end else begin 
-      if (do_write) begin 
-        fifo[w_ptr[addr_w-1:0]] <= data_i;
-        w_ptr <= w_ptr + 1'b1;
-      end
-      if (do_read) begin 
-        r_ptr <= r_ptr + 1'b1;
-      end
-    end
+    if (do_write) fifo[w_ptr] <= data_i;
+    if (do_read) rd_data_q <= fifo[r_ptr]; //read into bram latch
+    if (do_read_q) data_o <= rd_data_q; //read latch into bram reg
   end
-  assign data_o = fifo[r_ptr[addr_w-1:0]];
 
   always_ff @(posedge clk_i) begin 
     if (!rst_ni) begin 
+      r_ptr <= '0;
+      w_ptr <= '0;
       fill <= '0;
       full_o <= '0;
       empty_o <= 1'b1;
-    end else begin 
+    end else begin
+      if (do_write) w_ptr <= w_ptr + 1'b1;
+      if (do_read) r_ptr <= r_ptr + 1'b1;
+      
+      do_read_q <= do_read;
+      
       fill <= fill + do_write - do_read;
       full_o <= (fill == (addr_w+1)'(DEPTH - 1) && do_write && !do_read) || (full_o && !do_read);
       empty_o <= (fill == (addr_w+1)'(1) && (do_read && !do_write)) || (empty_o && !do_write);  

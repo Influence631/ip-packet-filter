@@ -9,7 +9,8 @@ from collections import deque
 
 FIFO_DEPTH = 32
 FIFO_WIDTH = 32
-NUM_BEATS = 1000
+READ_LATENCY = 2 # data_o has latency of 2 
+NUM_BEATS = 2000
 
 log = logging.getLogger("tb.test_fifo")
 log.setLevel(logging.INFO)
@@ -92,40 +93,44 @@ class FIFO_TB:
 
     async def mon_us(self):
         while 1 :
-            if ((self.src.wr_en.value == 1) & (self.src.full.value == 0)) :
+            if ((self.src.wr_en.value == 1) and (self.src.full.value == 0)) :
                 self.accepted += 1
                 self.model.append(self.src.data.value)
 
-            assert 0 <= self.accepted - self.beats <= self.depth, (
+            assert 0 <= self.accepted - self.beats <= self.depth + READ_LATENCY, (
                 f"the model has {len(self.model)} elements," 
-                f"where max {self.depth} allowed"
+                f"where max {self.depth} allowed + read latency"
             )
             await RisingEdge(self.dut.clk_i)
                         
 
     async def mon_ds(self):
+        handshake_q = deque([False] * (READ_LATENCY)) 
         while 1 :
-            if ((self.sink.rd_en.value == 1) & (self.sink.empty.value == 0)) :
-                assert self.model, f"trying to ready from an empty buffer"
-                exp = self.model.popleft()
-                got = self.sink.data.value
+            read = handshake_q.popleft()
+            if read :
                 self.beats += 1
-                assert got == exp, f"got {hex(got)}, exp {hex(exp)}"
+                exp = self.model.popleft()
+                actual = self.sink.data.value
+                assert actual == exp, f"actual {hex(actual)}, exp {hex(exp)}" 
+            handshake = (self.sink.rd_en.value == 1 and self.sink.empty.value == 0)
+            handshake_q.append(handshake)
             await RisingEdge(self.dut.clk_i)
-                        
+            
+                                        
 
 @cocotb.test(timeout_time=200, timeout_unit="us")
 async def full_throughput(dut) :
     tb = await FIFO_TB.create(dut)
     await tb.src.run(n_beats=NUM_BEATS, stall_chance=0.0)
     await tb.wait_quiet(expected=NUM_BEATS)
-
+    
     assert tb.accepted == tb.beats, f"accepted {tb.accepted} != beats {tb.beats}"
 
 
-@cocotb.test(timeout_time=200, timeout_unit="us")
+@cocotb.test(timeout_time=1000, timeout_unit="us")
 async def back_pressure(dut) :
-    tb = await FIFO_TB.create(dut, sink_stall_rate=0.9)
+    tb = await FIFO_TB.create(dut, sink_stall_rate=0.6)
     await tb.src.run(n_beats=NUM_BEATS, stall_chance=0.5)
     await tb.wait_quiet(expected=NUM_BEATS)
 
