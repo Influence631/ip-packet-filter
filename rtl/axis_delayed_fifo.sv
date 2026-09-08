@@ -1,4 +1,5 @@
 `default_nettype none
+`include "assert.svh"
 
 module axis_delayed_fifo #(
   parameter int FifoDepth = 16,
@@ -99,6 +100,18 @@ module axis_delayed_fifo #(
 
 
   //    ASSERTIONS    //
-
-  
+  `ASSERT_ARM
+  `ASSERT (ds_hold_values, (m_axis_tvalid && !m_axis_tready) |=> 
+      $stable(m_axis_tvalid) && $stable(m_axis_tkeep) 
+      && $stable(m_axis_tdata) && $stable(m_axis_tlast), 
+      "deasserted m_tvalid/data/keep/last without m_tready"
+  )
+  `ASSERT (us_hold_values, (s_axis_tvalid && !s_axis_tready) |=> 
+      $stable(s_axis_tvalid) && $stable(s_axis_tkeep) 
+      && $stable(s_axis_tdata) && $stable(s_axis_tlast), 
+      "deasserted s_tvalid/data/keep/last without s_tready"
+  )
+  `ASSERT(count_check, (int'(credits) + $countones(rd_valid_q) + int'(obuf_fill)) == OBufDepth, "credits + in_flight + obuf_fill != OBufDepth")
+  `ASSERT(valid_recovery, (!m_axis_tvalid && rd_valid_q[RdLatency-1]) |=> m_axis_tvalid, "m_tvalid not recovered after writing")
+  `ASSERT(a_credits_recover, (credits == '0 && m_axis_tready) |=> (credits != '0), "credits stuck at zero while downstream is ready")
 endmodule
