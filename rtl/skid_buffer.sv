@@ -88,15 +88,10 @@ module skid_buffer
   `ifndef SYNTHESIS
 
   `ASSERT_ARM
-  
   `ASSERT(a_us_hold, (us_valid_i & !us_ready_o) |=> (us_valid_i & $stable(us_data_i)), "us_valid/us_data changed without acceptance");
-
   `ASSERT(a_ds_hold, (ds_valid_o & !ds_ready_i) |=> (ds_valid_o & $stable(ds_data_o)), "a beat has been dropped before reading");
-
   `ASSERT(a_valid_state, state_q inside {StEmpty, StBusy, StFull}, "invalid state");
-
   `ASSERT(a_ready_recover, (ds_ready_i) |=> (us_ready_o), "us_ready_o stuck low after ds ready last cycle was high");
-
   `ASSERT(a_no_output_bubble, insert |=> ds_valid_o, "Accepted beat, but ds_valid_o != 1 next cycle.");
   
   `endif
