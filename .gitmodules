@@ -1,0 +1,3 @@
+[submodule "rtl/third_party/taxi"]
+	path = rtl/third_party/taxi
+	url = https://github.com/fpganinja/taxi

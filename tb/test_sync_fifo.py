@@ -137,4 +137,4 @@ async def back_pressure(dut) :
     assert tb.accepted == tb.beats, f"accepted {tb.accepted} != beats {tb.beats}"
          
 def test_sync_fifo():
-    run(top="sync_fifo", test_module="test_sync_fifo", parameters={"WIDTH" : FIFO_WIDTH, "DEPTH" : FIFO_DEPTH})
+    run(top="sync_fifo", test_module="test_sync_fifo", parameters={"Width" : FIFO_WIDTH, "Depth" : FIFO_DEPTH})

@@ -24,7 +24,7 @@ VENV       ?= $(HOME)/.venv/hdlenv
 STATE      ?= dump.surf.ron
 # top module name used by `make elab` (keep comments off this line: make
 # preserves the whitespace before a trailing `#`, which would corrupt $(TOP))
-TOP        ?= packet_filter
+TOP        ?= top_level
 VERILATOR  ?= verilator
 VFLAGS     ?= -Wall -Wno-EOFNEWLINE   # override to relax further, e.g. add -Wno-UNUSEDSIGNAL
 
@@ -33,6 +33,10 @@ PACKAGES   := $(shell grep -lE '^[[:space:]]*package[[:space:]]' $(RTL_DIR)/*.sv
 
 LINT_F     := lint.f
 VERIBLE_FL := verible.filelist
+
+# third-party sources: dirs for Verilator -y, files for Verible
+EXT_DIRS   := $(RTL_DIR)/third_party/taxi/src/axi/rtl
+EXT_FILES  := $(EXT_DIRS)/taxi_axil_if.sv
 
 .PHONY: lint elab filelists setup
 
@@ -46,14 +50,15 @@ $(LINT_F): $(SOURCES) Makefile
 	  echo '-I$(RTL_DIR)'; \
 	  echo '-y $(RTL_DIR)'; \
 	  echo '+libext+.sv+.v'; \
+	  for d in $(EXT_DIRS); do echo "-y $$d"; done; \
 	  for p in $(PACKAGES); do echo "$$p"; done; \
 	} > $@
 	@echo "regenerated $@  (packages: $(PACKAGES))"
 
 # Verible language-server project list: every source file, flat.
 $(VERIBLE_FL): $(SOURCES) Makefile
-	@printf '%s\n' $(SOURCES) > $@
-	@echo "regenerated $@  ($(words $(SOURCES)) files)"
+	@printf '%s\n' $(SOURCES) $(EXT_FILES) > $@
+	@echo "regenerated $@  ($(words $(SOURCES) $(EXT_FILES)) files)"
 
 # ---- per-file lint (default; tolerates incomplete designs) ------------------
 lint: filelists
@@ -234,7 +239,7 @@ define VSCODE_SETTINGS
 
   // Pylance defaults to "off"; without this nothing in $(TB_DIR)/ is checked.
   "python.analysis.typeCheckingMode": "standard",
-  "mypy-type-checker.reportingScope": "workspace"
+  "mypy-type-checker.reportingScope": "file"
 }
 endef
 
